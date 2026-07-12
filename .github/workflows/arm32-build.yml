@@ -1,26 +1,13 @@
-name: Build ARM 32-bit (armv7l)
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build-armv7:
-    runs-on: ubuntu-22.04
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
       - name: Install ARM toolchain
         run: |
           # 1. Add armhf foreign architecture
           sudo dpkg --add-architecture armhf
 
-          # 2. Restrict existing repositories to amd64 packages to prevent 404s
-          sudo sed -i 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list
-          sudo sed -i 's/deb https/deb [arch=amd64] https/g' /etc/apt/sources.list
+          # 2. Force ALL existing repositories (including security/mirrors) to only look for amd64 packages
+          sudo sed -i 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list /etc/apt/sources.list.d/* || true
+          sudo sed -i 's/deb https/deb [arch=amd64] https/g' /etc/apt/sources.list /etc/apt/sources.list.d/* || true
 
-          # 3. Add ports.ubuntu.com explicitly for armhf dependencies (Jammy 22.04)
+          # 3. Add ports.ubuntu.com explicitly for armhf dependencies
           cat <<EOF | sudo tee -a /etc/apt/sources.list
 
           # ARMHF Repositories
@@ -36,16 +23,4 @@ jobs:
           sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
           sudo apt-get install -y libc6-armhf-cross libc6-dev-armhf-cross
           sudo apt-get install -y libcrypt-dev:armhf
-      
-      - name: Compile for ARM 32-bit
-        run: |
-          # Using arm-linux-gnueabihf-gcc to match -mfloat-abi=hard
-          arm-linux-gnueabihf-gcc -Wall -O2 -mfpu=vfpv4 -mfloat-abi=hard -o man man.c -lpthread -lcrypt
-          file man
-      
-      - name: Upload ARM binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: man
-          path: man
 
