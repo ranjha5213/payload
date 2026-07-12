@@ -1,0 +1,38 @@
+name: Cross-Compile Dirty Cow for Multiple Architectures
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  cross-compile:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        target:
+          - { arch: armv7,   cc: arm-linux-gnueabi-gcc,    pkg: gcc-arm-linux-gnueabi }
+          - { arch: arm64,   cc: aarch64-linux-gnu-gcc,    pkg: gcc-aarch64-linux-gnu }
+          - { arch: mips,    cc: mips-linux-gnu-gcc,       pkg: gcc-mips-linux-gnu }
+          - { arch: mipsel,  cc: mipsel-linux-gnu-gcc,     pkg: gcc-mipsel-linux-gnu }
+          - { arch: x86_64,  cc: gcc,                      pkg: gcc }
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install toolchain
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ${{ matrix.target.pkg }} libcrypt-dev
+    
+    - name: Compile for ${{ matrix.target.arch }}
+      run: |
+        ${{ matrix.target.cc }} -static -Wall -O2 -o dirtycow-${{ matrix.target.arch }} dirtycow.c -lpthread -lcrypt
+        file dirtycow-${{ matrix.target.arch }}
+    
+    - name: Upload ${{ matrix.target.arch }} binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: dirtycow-${{ matrix.target.arch }}
+        path: dirtycow-${{ matrix.target.arch }}
