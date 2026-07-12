@@ -11,19 +11,25 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install ARM toolchain and libraries
+    - name: Install ARM toolchain
       run: |
         sudo apt-get update
-        # Install ARM toolchain
         sudo apt-get install -y gcc-arm-linux-gnueabi
-        # Install ARM-specific crypt library
-        sudo apt-get install -y libcrypt-dev:armhf
-        # Also install standard dev tools
+        
+        # Install ARM libraries (including crypt)
         sudo apt-get install -y libc6-armel-cross libc6-dev-armel-cross
-    
+        
+        # Manually install crypt for ARM
+        sudo dpkg --add-architecture armhf
+        sudo apt-get update
+        sudo apt-get install -y libcrypt-dev:armhf || echo "libcrypt:armhf not found, trying alternative"
+        
+        # Alternative: install cross-compilation libraries
+        sudo apt-get install -y libcrypt-dev
+        
     - name: Compile for ARM 32-bit
       run: |
-        # Compile without -static to avoid library issues
+        # Try without static linking
         arm-linux-gnueabi-gcc -Wall -O2 -o dirtycow-armv7l dirtycow.c -lpthread -lcrypt
         file dirtycow-armv7l
     
@@ -32,15 +38,3 @@ jobs:
       with:
         name: dirtycow-armv7l
         path: dirtycow-armv7l
-    
-    - name: Create Release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dirtycow-armv7l
-        tag_name: arm-v1.0.${{ github.run_number }}
-        name: Dirty Cow ARM 32-bit v1.0.${{ github.run_number }}
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
