@@ -11,13 +11,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install ARM toolchain
+    - name: Install ARM toolchain and libraries
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-arm-linux-gnueabi libcrypt-dev
+        # Install ARM toolchain
+        sudo apt-get install -y gcc-arm-linux-gnueabi
+        # Install ARM-specific crypt library
+        sudo apt-get install -y libcrypt-dev:armhf
+        # Also install standard dev tools
+        sudo apt-get install -y libc6-armel-cross libc6-dev-armel-cross
     
     - name: Compile for ARM 32-bit
       run: |
+        # Compile without -static to avoid library issues
         arm-linux-gnueabi-gcc -Wall -O2 -o dirtycow-armv7l dirtycow.c -lpthread -lcrypt
         file dirtycow-armv7l
     
