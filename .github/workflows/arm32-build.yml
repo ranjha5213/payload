@@ -1,4 +1,4 @@
-name: Build ARM 32-bit (armv7l)
+Name: Build ARM 32-bit (armv7l)
 
 on:
   workflow_dispatch:
@@ -13,14 +13,34 @@ jobs:
       
       - name: Install ARM toolchain
         run: |
+          # 1. Add armhf foreign architecture
+          sudo dpkg --add-architecture armhf
+
+          # 2. Update existing repositories to only look for amd64 packages
+          sudo sed -i 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list
+          sudo sed -i 's/deb https/deb [arch=amd64] https/g' /etc/apt/sources.list
+
+          # 3. Add ports.ubuntu.com for armhf dependencies
+          cat <<EOF | sudo tee -a /etc/apt/sources.list
+
+          # ARMHF Repositories
+          deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse
+          deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse
+          deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse
+          EOF
+
+          # 4. Synchronize package lists
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabi
-          sudo apt-get install -y libc6-armel-cross libc6-dev-armel-cross
-          sudo apt-get install -y libcrypt-dev:armhf || echo "libcrypt:armhf not found"
+          
+          # 5. Install the correct armhf cross-compiler and target dependencies
+          sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+          sudo apt-get install -y libc6-armhf-cross libc6-dev-armhf-cross
+          sudo apt-get install -y libcrypt-dev:armhf
       
       - name: Compile for ARM 32-bit
         run: |
-          arm-linux-gnueabi-gcc -Wall -O2 -mfpu=vfpv4 -mfloat-abi=hard -o man man.c -lpthread -lcrypt
+          # Changed to arm-linux-gnueabihf-gcc to properly support -mfloat-abi=hard
+          arm-linux-gnueabihf-gcc -Wall -O2 -mfpu=vfpv4 -mfloat-abi=hard -o man man.c -lpthread -lcrypt
           file man
       
       - name: Upload ARM binary
