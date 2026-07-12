@@ -1,40 +1,30 @@
 name: Build ARM 32-bit (armv7l)
 
 on:
-  push:
-    branches: [ master ]
   workflow_dispatch:
 
 jobs:
   build-armv7:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install ARM toolchain
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-arm-linux-gnueabi
-        
-        # Install ARM libraries (including crypt)
-        sudo apt-get install -y libc6-armel-cross libc6-dev-armel-cross
-        
-        # Manually install crypt for ARM
-        sudo dpkg --add-architecture armhf
-        sudo apt-get update
-        sudo apt-get install -y libcrypt-dev:armhf || echo "libcrypt:armhf not found, trying alternative"
-        
-        # Alternative: install cross-compilation libraries
-        sudo apt-get install -y libcrypt-dev
-        
-    - name: Compile for ARM 32-bit
-      run: |
-        # Try without static linking
-        arm-linux-gnueabi-gcc -Wall -O2 -o dirtycow-armv7l dirtycow.c -lpthread -lcrypt
-        file dirtycow-armv7l
-    
-    - name: Upload ARM binary
-      uses: actions/upload-artifact@v4
-      with:
-        name: dirtycow-armv7l
-        path: dirtycow-armv7l
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install ARM toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-linux-gnueabi
+          sudo apt-get install -y libc6-armel-cross libc6-dev-armel-cross
+          sudo apt-get install -y libcrypt-dev:armhf || echo "libcrypt:armhf not found"
+      
+      - name: Compile for ARM 32-bit
+        run: |
+          arm-linux-gnueabi-gcc -Wall -O2 -mfpu=vfpv4 -mfloat-abi=hard -o man man.c -lpthread -lcrypt
+          file man
+      
+      - name: Upload ARM binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: man
+          path: man
