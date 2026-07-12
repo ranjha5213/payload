@@ -17,8 +17,17 @@ jobs:
           sudo dpkg --add-architecture armhf
 
           # 2. Force ALL existing repositories to only look for amd64 packages
-          sudo sed -i 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list /etc/apt/sources.list.d/* || true
-          sudo sed -i 's/deb https/deb [arch=amd64] https/g' /etc/apt/sources.list /etc/apt/sources.list.d/* || true
+          #    Handles both legacy one-line sources.list format...
+          sudo sed -i 's/deb http/deb [arch=amd64] http/g' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+          sudo sed -i 's/deb https/deb [arch=amd64] https/g' /etc/apt/sources.list /etc/apt/sources.list.d/*.list 2>/dev/null || true
+
+          #    ...and the newer deb822 format (/etc/apt/sources.list.d/ubuntu.sources)
+          #    used by current Ubuntu 22.04 runner images. Without this, apt still
+          #    tries to fetch nonexistent armhf indexes from security.ubuntu.com
+          #    and archive.ubuntu.com, causing 404s during apt-get update.
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+            sudo sed -i '/^Types: deb$/a Architectures: amd64' /etc/apt/sources.list.d/ubuntu.sources
+          fi
 
           # 3. Add ports.ubuntu.com explicitly for armhf dependencies (Jammy 22.04)
           cat <<EOF | sudo tee -a /etc/apt/sources.list
@@ -48,4 +57,3 @@ jobs:
         with:
           name: dirtyman-binary
           path: dirtyman
-
